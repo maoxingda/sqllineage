@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, List
 from urllib.parse import urlencode
 from wsgiref.simple_server import make_server
 
-from sqllineage import DEFAULT_DIALECT, DEFAULT_HOST, DEFAULT_PORT, STATIC_FOLDER
+from sqllineage import DEFAULT_HOST, DEFAULT_PORT, STATIC_FOLDER
 from sqllineage.config import SQLLineageConfig
 from sqllineage.exceptions import SQLLineageException
 from sqllineage.utils.constant import LineageLevel
@@ -164,8 +164,8 @@ def lineage(payload):
 
     req_args = Namespace(**payload)
     sql = extract_sql_from_args(req_args)
-    dialect = getattr(req_args, "dialect", DEFAULT_DIALECT)
-    lr = LineageRunner(sql, dialect=dialect, verbose=True)
+    # dialect = getattr(req_args, "dialect", DEFAULT_DIALECT)
+    lr = LineageRunner(sql, dialect="redshift", verbose=True)
     data = {
         "verbose": str(lr),
         "dag": lr.to_cytoscape(),
@@ -202,6 +202,14 @@ def directory(payload):
 
 
 def draw_lineage_graph(**kwargs) -> None:
+    import threading
+    import webbrowser
+    import time
+
+    def open_webpage(url):
+        time.sleep(1)  # 延迟1秒
+        webbrowser.open(url)
+
     host = kwargs.pop("host", DEFAULT_HOST)
     port = kwargs.pop("port", DEFAULT_PORT)
     querystring = urlencode({k: v for k, v in kwargs.items() if v})
@@ -210,4 +218,12 @@ def draw_lineage_graph(**kwargs) -> None:
         app.root_path = Path(kwargs["f"]).parent
     with make_server(host, port, app) as httpd:
         print(f" * SQLLineage Running on http://{host}:{port}{path}")
+        # 创建子线程
+        thread = threading.Thread(
+            target=open_webpage, args=(f"http://{host}:{port}{path}",)
+        )
+
+        # 启动子线程
+        thread.start()
+
         httpd.serve_forever()

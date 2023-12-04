@@ -108,6 +108,16 @@ Target Tables:
         to turn the DAG into cytoscape format.
         """
         if level == LineageLevel.COLUMN:
+            import networkx as nx
+
+            dw_clg = self._sql_holder.column_lineage_graph
+            for n in dw_clg:
+                if "dwd.main_transactions_stg.id" == str(n):  # TODO 通过前端传过来
+                    return to_cytoscape(
+                        dw_clg.subgraph(list(nx.ancestors(dw_clg, n)) + [n]),
+                        compound=True,
+                    )
+
             return to_cytoscape(self._sql_holder.column_lineage_graph, compound=True)
         else:
             return to_cytoscape(self._sql_holder.table_lineage_graph)
@@ -215,3 +225,78 @@ Target Tables:
             ]
         )
         return dialects
+
+
+def draw_graph(*graphs):
+    import random
+    import networkx as nx
+    from matplotlib import pyplot as plt
+    from matplotlib.font_manager import FontProperties
+
+    def generate_hex_color():
+        # 生成一个随机的RGB颜色值
+        rgb_color = (
+            random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(0, 255),
+        )
+
+        # 将RGB转换为十六进制颜色值
+        hex_color = "#{:02x}{:02x}{:02x}".format(
+            rgb_color[0], rgb_color[1], rgb_color[2]
+        )
+
+        return hex_color
+
+    edge_type_colors = {
+        "lineage": generate_hex_color(),
+        "has_column": generate_hex_color(),
+        "has_alias": generate_hex_color(),
+        "deafult": generate_hex_color(),
+    }
+
+    edge_type_colors["lineage"] = "red"
+    edge_type_colors["has_column"] = "blue"
+    edge_type_colors["has_alias"] = "green"
+
+    title_color = generate_hex_color()
+    font_properties = FontProperties(
+        fname="/Users/maoxd/open-source/scp_zh/fonts/SimHei.ttf"
+    )
+
+    if len(graphs) > 1:
+        _, axes = plt.subplots(nrows=len(graphs), ncols=1, figsize=(100, 8))
+        for i, graph in enumerate(graphs):
+            edge_colors = [
+                edge_type_colors[attr.get("type", "deafult")]
+                for _, _, attr in graph.edges(data=True)
+            ]
+
+            pos = nx.drawing.nx_pydot.pydot_layout(graph, prog="dot")
+
+            title = graph.title if hasattr(graph, "title") else ""
+            axes[i].set_title(
+                title, color=title_color, fontproperties=font_properties, fontsize=20
+            )
+            nx.draw_networkx_labels(graph, pos, ax=axes[i])
+            nx.draw_networkx_edges(
+                graph, pos, edge_color=edge_colors, arrows=True, ax=axes[i]
+            )
+    else:
+        graph = graphs[0]
+        plt.figure(figsize=(100, 10))
+        edge_colors = [
+            edge_type_colors[attr.get("type", "deafult")]
+            for _, _, attr in graph.edges(data=True)
+        ]
+        edge_labels = {(u, v): attr["type"] for u, v, attr in graph.edges(data=True)}
+
+        pos = nx.drawing.nx_pydot.pydot_layout(graph, prog="dot")
+
+        title = graph.title if hasattr(graph, "title") else ""
+        plt.title(title, color=title_color, fontproperties=font_properties, fontsize=20)
+        nx.draw_networkx_labels(graph, pos)
+        nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels)
+        nx.draw_networkx_edges(graph, pos, edge_color=edge_colors, arrows=True)
+
+    plt.show()
