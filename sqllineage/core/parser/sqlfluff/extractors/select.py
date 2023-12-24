@@ -1,3 +1,7 @@
+import json
+import os
+import re
+
 from sqlfluff.core.parser import BaseSegment
 
 from sqllineage.core.holders import SubQueryLineageHolder
@@ -35,6 +39,19 @@ class SelectExtractor(BaseExtractor, SourceHandlerMixin):
         statement: BaseSegment,
         context: AnalyzerContext,
     ) -> SubQueryLineageHolder:
+        file_name = f"select.{statement.type}.json"
+        if os.path.exists(file_name):
+            with open(file_name, "r") as f:
+                data = json.load(f)
+            data[statement.type].append(re.sub(r"\s+", " ", statement.raw))
+            with open(file_name, "w") as f:
+                json.dump(data, f, indent=4)
+        else:
+            data = {
+                statement.type: [re.sub(r"\s+", " ", statement.raw)],
+            }
+            with open(file_name, "w") as f:
+                json.dump(data, f, indent=4)
         holder = self._init_holder(context)
         subqueries = []
         segments = (
