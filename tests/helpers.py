@@ -37,6 +37,7 @@ def _assert_table_lineage(lr: LineageRunner, source_tables=None, target_tables=N
 
 
 def _assert_column_lineage(lr: LineageRunner, column_lineages=None):
+    expected_max_len = actual_max_len = 0
     expected = set()
     if column_lineages:
         for src, tgt in column_lineages:
@@ -46,11 +47,18 @@ def _assert_column_lineage(lr: LineageRunner, column_lineages=None):
             tgt_col: Column = Column(tgt.column)
             tgt_col.parent = Table(tgt.qualifier)
             expected.add((src_col, tgt_col))
+            if len(str(tgt_col)) > expected_max_len:
+                expected_max_len = len(str(tgt_col))
     actual = {(lineage[0], lineage[-1]) for lineage in set(lr.get_column_lineage())}
 
-    assert (
-        set(actual) == expected
-    ), f"\n\tExpected Lineage: {expected}\n\tActual Lineage: {actual}"
+    for _, tgt in actual:
+        if len(str(tgt)) > actual_max_len:
+            actual_max_len = len(str(tgt))
+
+    assert set(actual) == expected, (
+        f"\n{' ' * 4}Expected Lineage:\n{' ' * 8}{(chr(10) + ' ' * 8).join(list(map(lambda t: str(t[1]).ljust(expected_max_len) + ' <- ' + str(t[0]), expected - actual)))}"
+        f"\n{' ' * 4}Actual Lineage:\n{' ' * 8}{(chr(10) + ' ' * 8).join(list(map(lambda t: str(t[1]).ljust(actual_max_len) + ' <- ' + str(t[0]), actual - expected)))}"
+    )
 
 
 def assert_table_lineage_equal(
