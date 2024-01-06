@@ -17,7 +17,7 @@ from sqllineage.core.metadata.sqlalchemy import SQLAlchemyMetaDataProvider
 from sqllineage.core.metadata_provider import MetaDataProvider
 from sqllineage.core.models import Column, Table
 from sqllineage.runner import LineageRunner
-
+from sqllineage.utils.entities import ColumnQualifierTuple
 
 def _assert_table_lineage(lr: LineageRunner, source_tables=None, target_tables=None):
     for _type, actual, expected in zip(
@@ -94,6 +94,30 @@ def assert_column_lineage_equal(
     lr_sqlfluff = LineageRunner(
         sql, dialect=dialect, metadata_provider=metadata_provider
     )
+    if column_lineages is not None and all(
+        isinstance(src_col, str)
+        and isinstance(tgt_col, str)
+        for src_col, tgt_col in column_lineages
+    ):
+        column_lineages_with_model = []
+        for tgt_col, src_col in column_lineages:
+            tgt_col_segs = tgt_col.split(".")
+            src_col_segs = src_col.split(".")
+            if len(tgt_col_segs) == 3 and len(src_col_segs) == 3:
+                column_lineages_with_model.append(
+                    (
+                        ColumnQualifierTuple(src_col_segs[-1], '.'.join(src_col_segs[:2])),
+                        ColumnQualifierTuple(tgt_col_segs[-1], '.'.join(tgt_col_segs[:2])),
+                    )
+                )
+            elif len(tgt_col_segs) == 2 and len(src_col_segs) == 2:
+                column_lineages_with_model.append(
+                    (
+                        ColumnQualifierTuple(src_col_segs[-1], src_col_segs[0]),
+                        ColumnQualifierTuple(tgt_col_segs[-1], tgt_col_segs[0]),
+                    )
+                )
+        column_lineages = column_lineages_with_model
     if test_sqlparse:
         _assert_column_lineage(lr, column_lineages)
     if test_sqlfluff:
