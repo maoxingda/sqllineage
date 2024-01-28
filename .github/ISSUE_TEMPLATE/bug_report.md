@@ -1,68 +1,48 @@
----
-name: Bug report
-about: Report a bug to help improve sqllineage
-title: ''
-labels: bug
-assignees: ''
-
----
-
-**Describe the bug**
-* A clear and concise description of what the bug is.
-
 **SQL**
-Paste the SQL text here. For example:
 ```sql
-insert into analyze select * from foo;
+insert into public.tgt_tbl1
+(
+    name,
+    email
+)
+select
+    st1.name,
+    st1.name || st1.email || '@gmail.com' as email
+from
+    public.src_tbl1 as st1
 ```
 
 **To Reproduce**
+
+
 *Note here we refer to SQL provided in prior step as stored in a file named `test.sql`*
-
-- `if` CLI (Command Line Interface): provide the command you're calling and the output. 
-For example:
-```shell
-sqllineage -f test.sql --dialect=ansi
-```
-```
-Statements(#): 1
-Source Tables:
-    <default>.foo
-Target Tables:
-    <default>.analyze
-```
-
-- `elif` API (Application Programming Interface): provide the python code you're using and the output. 
-For example:
 ```python
 from sqllineage.runner import LineageRunner
+
 with open("test.sql") as f:
     sql = f.read()
-result = LineageRunner(sql, dialect="ansi")
-print(result.target_tables)
-```
-```
-[Table: <default>.analyze]
+
+lr = LineageRunner(sql, dialect="redshift")
+
+lr.print_column_lineage()
 ```
 
-- `elif` Web UI (Web User Interface): provide the lineage graph which could be downloaded from the page, or screenshots if there're components other than the lineage graph that's related to this bug.
-
-- `else`: whatever other ways to reproduce this bug.
+**Actual behavior**
+```
+public.tgt_tbl1.email <- public.src_tbl1.email
+```
 
 **Expected behavior**
-A clear and concise description of what you expected to happen, and the output in accordance with the `To Reproduce` section.
+```
+public.tgt_tbl1.name <- public.src_tbl1.name
+public.tgt_tbl1.name <- public.src_tbl1.email
+public.tgt_tbl1.email <- public.src_tbl1.email
+```
 
 **Python version (available via `python --version`)**
- - 3.8.17
- - 3.9.18
- - 3.10.13
- - 3.11.5
- - etc.
+ - 3.10
 
 **SQLLineage version (available via `sqllineage --version`):**
- - 1.3.8
- - 1.4.7
- - etc.
+ - 1.5.0
 
 **Additional context**
-Add any other context about the problem here.
