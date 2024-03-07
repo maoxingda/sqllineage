@@ -28,7 +28,7 @@ DEFAULT_LOGGING = {
 }
 
 STATIC_FOLDER = "build"
-DEFAULT_HOST = "localhost"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
 SQLPARSE_DIALECT = "non-validating"
 DEFAULT_DIALECT = "ansi"
